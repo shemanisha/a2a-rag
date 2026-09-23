@@ -17,6 +17,18 @@ from search.index import (
     create_index
 )
 
+from pydantic import BaseModel
+
+from retrieval.service import (
+    ask_question
+)
+
+class QuestionRequest(
+    BaseModel
+):
+
+    question: str
+
 
 app = FastAPI(
 
@@ -123,3 +135,18 @@ async def upload_document(
             os.remove(
                 temp_path
             )
+    
+
+
+
+
+@app.post(
+    "/api/v1/ask"
+)
+def ask(
+    request: QuestionRequest
+):
+
+    return ask_question(
+        request.question
+    )
