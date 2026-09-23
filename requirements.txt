@@ -1,0 +1,10 @@
+fastapi 
+uvicorn[standard]
+python-multipart
+python-dotenv
+opensearch-py
+sentence-transformers
+langchain-community
+langchain-text-splitters
+pypdf
+ollama
