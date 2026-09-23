@@ -7,62 +7,53 @@ load_dotenv()
 
 
 OPENSEARCH_HOST = os.getenv(
-    "OPENSEARCH_HOST",
-    "localhost"
+    "OPENSEARCH_HOST"
 )
 
 OPENSEARCH_PORT = int(
     os.getenv(
-        "OPENSEARCH_PORT",
-        "9200"
+        "OPENSEARCH_PORT"
     )
 )
 
 OPENSEARCH_INDEX = os.getenv(
-    "OPENSEARCH_INDEX",
-    "rag_documents"
+    "OPENSEARCH_INDEX"
 )
 
 
 EMBEDDING_MODEL = os.getenv(
-    "EMBEDDING_MODEL",
-    "sentence-transformers/all-MiniLM-L6-v2"
+    "EMBEDDING_MODEL"
 )
 
 
 OLLAMA_MODEL = os.getenv(
-    "OLLAMA_MODEL",
-    "llama3.2:1b"
+    "OLLAMA_MODEL"
 )
 
 
 CHUNK_SIZE = int(
     os.getenv(
-        "CHUNK_SIZE",
-        "800"
+        "CHUNK_SIZE"
     )
 )
 
 
 CHUNK_OVERLAP = int(
     os.getenv(
-        "CHUNK_OVERLAP",
-        "100"
+        "CHUNK_OVERLAP"
     )
 )
 
 
 RETRIEVAL_TOP_K = int(
     os.getenv(
-        "RETRIEVAL_TOP_K",
-        "20"
+        "RETRIEVAL_TOP_K"
     )
 )
 
 
 RERANK_TOP_K = int(
     os.getenv(
-        "RERANK_TOP_K",
-        "5"
+        "RERANK_TOP_K"
     )
 )
