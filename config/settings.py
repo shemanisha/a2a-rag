@@ -45,6 +45,11 @@ CHUNK_OVERLAP = int(
 )
 
 
+# Chunking strategy: fixed | recursive | sentence | structure | semantic | table | parent-child
+CHUNK_STRATEGY = os.getenv("CHUNK_STRATEGY", "recursive")
+CHUNK_SEMANTIC_SIMILARITY = float(os.getenv("CHUNK_SEMANTIC_SIMILARITY", "0.7"))
+
+
 RETRIEVAL_TOP_K = int(
     os.getenv(
         "RETRIEVAL_TOP_K"

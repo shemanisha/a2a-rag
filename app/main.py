@@ -6,11 +6,19 @@ from fastapi import (
     FastAPI,
     UploadFile,
     File,
-    HTTPException
+    HTTPException,
+    Form,
 )
 
 from ingestion.service import (
     ingest_document
+)
+
+from ingestion.validator import (
+    ALLOWED_EXTENSIONS,
+)
+from ingestion.chunker import (
+    SUPPORTED_STRATEGIES,
 )
 
 from search.index import (
@@ -57,9 +65,8 @@ def health():
     "/api/v1/documents"
 )
 async def upload_document(
-
-    file: UploadFile = File(...)
-
+    file: UploadFile = File(...),
+    chunk_strategy: str | None = Form(default=None),
 ):
 
     extension = os.path.splitext(
@@ -67,14 +74,11 @@ async def upload_document(
     )[1].lower()
 
 
-    if extension != ".pdf":
-
+    if extension not in ALLOWED_EXTENSIONS:
         raise HTTPException(
-
             status_code=400,
-
-            detail="For now only PDF is supported"
-
+            detail=(f"Unsupported file type: {extension}. "
+                    f"Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}"),
         )
 
 
@@ -83,13 +87,7 @@ async def upload_document(
 
     try:
 
-        with tempfile.NamedTemporaryFile(
-
-            delete=False,
-
-            suffix=".pdf"
-
-        ) as temp_file:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=extension) as temp_file:
 
 
             shutil.copyfileobj(
@@ -106,12 +104,14 @@ async def upload_document(
             )
 
 
+        # Validate provided chunk strategy
+        if chunk_strategy is not None and chunk_strategy not in SUPPORTED_STRATEGIES:
+            raise HTTPException(status_code=400, detail=f"Unsupported chunk strategy: {chunk_strategy}")
+
         result = ingest_document(
-
             file_path=temp_path,
-
-            filename=file.filename
-
+            filename=file.filename,
+            chunk_strategy=chunk_strategy,
         )
 
 

@@ -60,6 +60,17 @@ def create_index():
                     "type": "text"
                 },
 
+                "file_hash": {
+                    "type": "keyword"
+                },
+
+                "content_hash": {
+                    "type": "keyword"
+                },
+                "document_version": {
+                    "type": "integer"
+                },
+
 
                 "embedding": {
 
@@ -95,3 +106,30 @@ def create_index():
     print(
         f"Index '{OPENSEARCH_INDEX}' created"
     )
+
+    # Create a separate index to store document-level metadata
+    docs_index = f"{OPENSEARCH_INDEX}_documents"
+
+    if client.indices.exists(index=docs_index):
+        print(f"Index '{docs_index}' already exists")
+        return
+
+    docs_body = {
+        "mappings": {
+            "properties": {
+                "document_id": {"type": "keyword"},
+                "filename": {"type": "keyword"},
+                "document_type": {"type": "keyword"},
+                "department": {"type": "keyword"},
+                "version": {"type": "integer"},
+                "status": {"type": "keyword"},
+                "file_hash": {"type": "keyword"},
+                "content_hash": {"type": "keyword"},
+                "created_at": {"type": "date"},
+            }
+        }
+    }
+
+    client.indices.create(index=docs_index, body=docs_body)
+
+    print(f"Index '{docs_index}' created")

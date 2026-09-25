@@ -8,3 +8,7 @@ langchain-community
 langchain-text-splitters
 pypdf
 ollama
+beautifulsoup4
+python-docx
+openpyxl
+xlrd
