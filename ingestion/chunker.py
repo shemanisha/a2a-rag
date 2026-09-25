@@ -112,7 +112,7 @@ def _semantic_group(parts: List[str], threshold: float) -> List[str]:
     return grouped
 
 
-def create_chunks(pages, strategy: Optional[str] = None) -> List[Chunk]:
+def create_chunks(pages, strategy: Optional[str] = None, document_metadata: dict | None = None) -> List[Chunk]:
     """Create chunks according to CHUNK_STRATEGY.
 
     Strategies supported: `recursive`, `structure`, `parent-child`, `semantic`.
@@ -127,7 +127,8 @@ def create_chunks(pages, strategy: Optional[str] = None) -> List[Chunk]:
         if effective == "structure":
             parts = _structure_split(text)
             for p in parts:
-                all_chunks.append(Chunk(text=p, page_number=page.page_number))
+                c = Chunk(text=p, page_number=page.page_number)
+                all_chunks.append(c)
 
         elif effective == "parent-child":
             pcs = _parent_child_split(text)
@@ -141,12 +142,24 @@ def create_chunks(pages, strategy: Optional[str] = None) -> List[Chunk]:
             parts = _recursive_split(text)
             grouped = _semantic_group(parts, CHUNK_SEMANTIC_SIMILARITY)
             for g in grouped:
-                all_chunks.append(Chunk(text=g, page_number=page.page_number))
+                c = Chunk(text=g, page_number=page.page_number)
+                all_chunks.append(c)
 
         else:
             # default recursive
             parts = _recursive_split(text)
             for p in parts:
-                all_chunks.append(Chunk(text=p, page_number=page.page_number))
+                c = Chunk(text=p, page_number=page.page_number)
+                all_chunks.append(c)
+
+    # Attach document-level metadata to each chunk as attributes for indexing
+    if document_metadata:
+        for c in all_chunks:
+            for k, v in document_metadata.items():
+                try:
+                    setattr(c, k, v)
+                except Exception:
+                    # ignore non-serializable or invalid attrs
+                    pass
 
     return all_chunks

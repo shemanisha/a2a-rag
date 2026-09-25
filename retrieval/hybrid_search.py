@@ -7,113 +7,115 @@ from retrieval.bm25_search import (
 )
 
 
+RRF_K = 60
+
 
 def hybrid_search(
-    question
+    question: str,
+    top_k: int | None = None,
+    metadata_filters: dict | None = None,
+    vector_min_score: float | None = None,
 ):
 
+    # --------------------------------
+    # 1. Vector search
+    # --------------------------------
+
     vector_results = vector_search(
-        question
+        question=question,
+        top_k=top_k,
+        metadata_filters=metadata_filters,
+        min_score=vector_min_score,
     )
+
+    # --------------------------------
+    # 2. BM25 search
+    # --------------------------------
 
     bm25_results = bm25_search(
-        question
+        question=question,
+        top_k=top_k,
+        metadata_filters=metadata_filters,
     )
-
 
     scores = {}
 
-    documents = {}
+    chunks = {}
 
-
-    RRF_K = 60
-
-
-    # Vector results
+    # --------------------------------
+    # 3. Vector RRF scores
+    # --------------------------------
 
     for rank, result in enumerate(
         vector_results,
         start=1
     ):
 
-        document_id = result["_id"]
+        chunk_id = result["_id"]
 
-        documents[
-            document_id
-        ] = result
+        chunks[chunk_id] = result
 
-
-        scores[
-            document_id
-        ] = (
-
+        scores[chunk_id] = (
             scores.get(
-                document_id,
+                chunk_id,
                 0
             )
-
             +
-
             1 / (
                 RRF_K + rank
             )
-
         )
 
-
-    # BM25 results
+    # --------------------------------
+    # 4. BM25 RRF scores
+    # --------------------------------
 
     for rank, result in enumerate(
         bm25_results,
         start=1
     ):
 
-        document_id = result["_id"]
+        chunk_id = result["_id"]
 
-        documents[
-            document_id
-        ] = result
+        chunks[chunk_id] = result
 
-
-        scores[
-            document_id
-        ] = (
-
+        scores[chunk_id] = (
             scores.get(
-                document_id,
+                chunk_id,
                 0
             )
-
             +
-
             1 / (
                 RRF_K + rank
             )
-
         )
 
+    # --------------------------------
+    # 5. Sort by RRF
+    # --------------------------------
 
     ranked_ids = sorted(
-
         scores,
-
         key=scores.get,
-
         reverse=True
-
     )
 
+    results = []
 
-    results = [
+    for chunk_id in ranked_ids:
 
-        documents[
-            document_id
-        ]
+        result = chunks[chunk_id]
 
-        for document_id
-        in ranked_ids
+        # Save RRF score
+        # Useful later for debugging
+        # and evaluation.
 
-    ]
+        result["rrf_score"] = (
+            scores[chunk_id]
+        )
 
+        results.append(
+            result
+        )
 
     return results

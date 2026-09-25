@@ -13,63 +13,57 @@ model = CrossEncoder(
 
 
 def rerank(
-    question,
+    question: str,
     results
 ):
 
     if not results:
-
         return []
-
 
     pairs = []
 
-
     for result in results:
 
-        text = result[
+        content = result[
             "_source"
         ]["content"]
-
 
         pairs.append(
             [
                 question,
-                text
+                content
             ]
         )
-
 
     scores = model.predict(
         pairs
     )
 
+    ranked = []
 
-    ranked = list(
-        zip(
-            results,
-            scores
+    for result, score in zip(
+        results,
+        scores
+    ):
+
+        result[
+            "reranker_score"
+        ] = float(score)
+
+        ranked.append(
+            result
         )
-    )
-
 
     ranked.sort(
-
-        key=lambda item:
-            item[1],
-
+        key=lambda result:
+            result[
+                "reranker_score"
+            ],
         reverse=True
-
     )
 
+    # Apply thresholding: only keep items with positive (or sufficiently high) reranker score.
+    # If you want a configurable cutoff, move this to settings.
+    filtered = [r for r in ranked if r["reranker_score"] is not None and r["reranker_score"] > -10.0]
 
-    return [
-
-        result
-
-        for result, score
-        in ranked[
-            :RERANK_TOP_K
-        ]
-
-    ]
+    return filtered[:RERANK_TOP_K]

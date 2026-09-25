@@ -45,13 +45,26 @@ def bulk_index_chunks(
             },
         }
 
-        if getattr(chunk, "file_hash", None):
-            action["_source"]["file_hash"] = chunk.file_hash
+        # Preserve common document metadata fields if present on chunk
+        for meta_field in ("file_hash", "content_hash", "document_version", "mime_type", "department", "document_type"):
+            if getattr(chunk, meta_field, None) is not None:
+                action["_source"][meta_field] = getattr(chunk, meta_field)
 
-        if getattr(chunk, "content_hash", None):
-            action["_source"]["content_hash"] = chunk.content_hash
-        if getattr(chunk, "document_version", None):
-            action["_source"]["document_version"] = chunk.document_version
+        # Also copy any additional simple attrs from chunk that are strings/ints
+        # to support flexible metadata without changing the mapping.
+        for attr in dir(chunk):
+            if attr.startswith("_"):
+                continue
+            if attr in ("text", "page_number", "parent_id"):
+                continue
+            if attr in ("file_hash", "content_hash", "document_version", "mime_type", "department", "document_type"):
+                continue
+            try:
+                val = getattr(chunk, attr)
+            except Exception:
+                continue
+            if isinstance(val, (str, int, float, bool)):
+                action["_source"][attr] = val
 
 
         actions.append(

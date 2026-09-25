@@ -41,60 +41,57 @@ def ingest_document(file_path: str, filename: str, chunk_strategy: str | None = 
     # 1. Validate file
     validate_file_path(file_path)
 
-    # 2. Detect type and extract
+    # Extract
     kind = detect_mime_type(file_path)
-
     extracted = extract(file_path, kind)
 
-    # 3. Normalize / clean extracted text and create pages
+    # Normalize
     pages = normalize_document(extracted)
 
-    # 3b. File hash and content hash for deduplication
+    # Hash
     file_hash = sha256_file(file_path)
 
-    # content-level hash: concatenate cleaned pages
-    content_concat = "\n".join([p.text for p in pages])
+    content_concat = "\n".join(p.text for p in pages)
     content_hash = sha256_text(content_concat)
 
-    # Pre-index duplicate checks
+    # Duplicate check
     if find_by_file_hash(file_hash):
         return {
             "status": "SKIPPED",
-            "reason": "file_already_exists",
-            "file_hash": file_hash,
+            "reason": "file_already_exists"
         }
 
     existing_version = find_content_version(content_hash)
 
-    # 3. Document ID and metadata
+    # Document identity
     document_id = str(uuid.uuid4())
     document_version = (existing_version or 0) + 1
 
-    print(f"Pages loaded: {len(pages)} | format: {extracted.metadata.get('format')}")
+    # Create document metadata ONCE
+    document_metadata = {
+        "document_id": document_id,
+        "filename": filename,
+        "mime_type": kind,
+        "document_type": extracted.metadata.get("document_type"),
+        "department": extracted.metadata.get("department"),
+        "version": document_version,
+        "document_version": document_version,
+        "file_hash": file_hash,
+        "content_hash": content_hash,
+    }
 
-    # 4. Chunk
-    chunks = create_chunks(pages, strategy=chunk_strategy)
+    # Create chunks WITH metadata
+    chunks = create_chunks(
+        pages,
+        strategy=chunk_strategy,
+        document_metadata=document_metadata,
+    )
 
-    print(f"Chunks created: {len(chunks)}")
-
-    if len(chunks) == 0:
-        raise ValueError("No text found in document")
-
-    # 5. Get chunk texts
+    # Embed
     texts = [chunk.text for chunk in chunks]
-
-    # 6. Embeddings
     embeddings = create_embeddings(texts)
 
-    print(f"Embeddings created: {len(embeddings)}")
-
-    # Attach hashes to chunks for indexing
-    for c in chunks:
-        setattr(c, "file_hash", file_hash)
-        setattr(c, "content_hash", content_hash)
-        setattr(c, "document_version", document_version)
-
-    # 7. OpenSearch
+    # Index
     success, errors = bulk_index_chunks(
         document_id=document_id,
         filename=filename,
@@ -102,20 +99,12 @@ def ingest_document(file_path: str, filename: str, chunk_strategy: str | None = 
         embeddings=embeddings,
     )
 
-    # Persist document-level metadata
-    upsert_document_metadata(
-        {
-            "document_id": document_id,
-            "filename": filename,
-            "document_type": extracted.metadata.get("document_type"),
-            "department": extracted.metadata.get("department"),
-            "version": document_version,
-            "status": "ACTIVE",
-            "file_hash": file_hash,
-            "content_hash": content_hash,
-        }
-    )
-
+    # Store one document-level record
+    upsert_document_metadata({
+        **document_metadata,
+        "status": "ACTIVE",
+    })
+    
     return {
         "document_id": document_id,
         "filename": filename,
